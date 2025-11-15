@@ -1,0 +1,40 @@
+{
+  "name": "shopifya-app-apis",
+  "version": "1.0.0",
+  "description": "Shopify App APIs for managing shops, users, stock, sales, payments, and reporting",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "setup-db": "node src/setup-database.js",
+    "seed-db": "node src/seed-database.js",
+    "migrate-min-stock": "node src/migrate-products-min-stock.js",
+    "migrate-products": "node src/migrate-products-category.js",
+    "migrate-pricing": "node src/migrate-pricing-to-stock.js",
+    "migrate-soft-delete": "node src/migrate-soft-delete.js"
+  },
+  "keywords": [
+    "shopify",
+    "api",
+    "ecommerce",
+    "inventory"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.6.5",
+    "nodemailer": "^7.0.10"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
