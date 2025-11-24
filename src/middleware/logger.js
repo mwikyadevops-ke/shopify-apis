@@ -88,10 +88,12 @@ export const errorLogger = (err, req, res, next) => {
     // Only log operational errors (like invalid credentials) at info level, not error level
     // These are expected business logic errors, not system failures
     if (err.isOperational) {
-        // Log operational errors more quietly
+        // Log operational errors quietly - these are expected and don't indicate system problems
+        // Only log in development mode, and use console.log instead of console.error
         if (process.env.NODE_ENV === 'development') {
             console.log(`[${timestamp}] ${err.statusCode || 500} ${req.method} ${req.originalUrl || req.url}: ${err.message}`);
         }
+        // Don't log stack traces for operational errors - they're expected business logic errors
     } else {
         // Log non-operational errors (actual system errors) at error level
         console.error(`[${timestamp}] ERROR:`, err.message);
