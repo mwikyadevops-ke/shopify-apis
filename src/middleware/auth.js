@@ -1,32 +1,48 @@
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler.js';
 
+/**
+ * Verify access token and guard protected routes.
+ * Handles expired tokens gracefully so the server doesn't crash
+ * and the frontend can trigger the refresh-token flow.
+ */
 export const verifyToken = (req, res, next) => {
-    try {
-        const token = req.headers.authorization?.split(' ')[1] || req.cookies?.token;
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const token = bearerToken || req.cookies?.accessToken || req.cookies?.token;
 
-        if (!token) {
-            throw new AppError('Authentication required', 401);
+    if (!token) {
+        return next(new AppError('Authentication required', 401));
+    }
+
+    const secret = process.env.JWT_SECRET || 'your-secret-key';
+
+    jwt.verify(token, secret, (err, decoded) => {
+        if (err) {
+            if (err.name === 'TokenExpiredError') {
+                // Flag for downstream handlers/frontends to know a refresh is needed
+                req.tokenExpired = true;
+                return res.status(401).json({
+                    success: false,
+                    message: 'Token expired',
+                    code: 'TOKEN_EXPIRED'
+                });
+            }
+
+            if (err.name === 'JsonWebTokenError') {
+                return next(new AppError('Invalid token', 401));
+            }
+
+            return next(err);
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-        
-        // Ensure this is an access token, not a refresh token
         if (decoded.type && decoded.type !== 'access') {
-            throw new AppError('Invalid token type. Access token required', 401);
+            return next(new AppError('Invalid token type. Access token required', 401));
         }
-        
+
         req.user = decoded;
         next();
-    } catch (error) {
-        if (error.name === 'TokenExpiredError') {
-            throw new AppError('Token expired', 401);
-        }
-        if (error.name === 'JsonWebTokenError') {
-            throw new AppError('Invalid token', 401);
-        }
-        next(error);
-    }
+    });
 };
 
 export const requireRole = (...roles) => {

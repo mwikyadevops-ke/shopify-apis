@@ -1,11 +1,7 @@
 export const errorHandler = (err, req, res, next) => {
-    // Only log full error details for non-operational errors or in development
-    // Operational errors (like invalid credentials) are expected and shouldn't clutter logs
-    if (!err.isOperational || process.env.NODE_ENV === 'development') {
-        console.error('Error:', err.message);
-        if (process.env.NODE_ENV === 'development') {
-            console.error('Stack:', err.stack);
-        }
+    // Ensure response hasn't been sent yet
+    if (res.headersSent) {
+        return next(err);
     }
 
     // Validation errors from express-validator
@@ -55,6 +51,7 @@ export const errorHandler = (err, req, res, next) => {
     }
 
     // AppError (custom errors) - handle gracefully without crashing
+    // Operational errors are expected business logic errors (like invalid credentials)
     if (err.isOperational) {
         return res.status(err.statusCode || 500).json({
             success: false,
@@ -62,17 +59,41 @@ export const errorHandler = (err, req, res, next) => {
         });
     }
 
-    // Default error
-    res.status(err.statusCode || err.status || 500).json({
-        success: false,
-        message: err.message || 'Internal server error',
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    });
+    // Default error - only log non-operational errors
+    // This prevents system crashes and ensures all errors are handled
+    const statusCode = err.statusCode || err.status || 500;
+    
+    // Only log unexpected errors (non-operational)
+    if (!err.isOperational) {
+        console.error(`[${new Date().toISOString()}] Unexpected error:`, err.message);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Stack:', err.stack);
+        }
+    }
+
+    // Always send a response to prevent crashes
+    try {
+        res.status(statusCode).json({
+            success: false,
+            message: err.message || 'Internal server error',
+            ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+        });
+    } catch (responseError) {
+        // If sending response fails, log it but don't crash
+        console.error('Failed to send error response:', responseError);
+    }
 };
 
 export const asyncHandler = (fn) => {
     return (req, res, next) => {
-        Promise.resolve(fn(req, res, next)).catch(next);
+        Promise.resolve(fn(req, res, next)).catch((err) => {
+            // Ensure errors are properly handled
+            if (!err.isOperational && !err.statusCode) {
+                // Wrap unexpected errors in AppError
+                return next(new AppError(err.message || 'An unexpected error occurred', 500));
+            }
+            next(err);
+        });
     };
 };
 
