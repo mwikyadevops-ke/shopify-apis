@@ -98,7 +98,6 @@ const Report = {
                     si.product_id,
                     p.name as product_name,
                     p.sku,
-                    p.category,
                     SUM(si.quantity) as total_quantity_sold,
                     SUM(si.total_price) as total_revenue,
                     AVG(si.unit_price) as average_price,
