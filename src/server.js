@@ -42,55 +42,32 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false
 }));
 
-// CORS configuration
+// CORS configuration - read origins only from .env
 const corsOptions = {
     credentials: true,
     optionsSuccessStatus: 200
 };
 
-// Handle multiple origins or allow all in development
 if (process.env.CORS_ORIGIN) {
-    // Support comma-separated origins
-    const origins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
-    corsOptions.origin = (origin, callback) => {
-        if (!origin || origins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    };
-} else if (process.env.NODE_ENV === 'production') {
-    // In production, require CORS_ORIGIN to be set
-    corsOptions.origin = false; // This will cause CORS to reject all origins
-    console.warn('⚠️  CORS_ORIGIN not set in production. CORS requests will be blocked.');
-} else {
-    // Development: allow common localhost ports
+    // Support comma-separated origins from .env_
+    const origins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(origin => origin.length > 0);
     corsOptions.origin = (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) {
             return callback(null, true);
         }
-        
-        // Allow common development origins
-        const allowedOrigins = [
-            'http://localhost:3000',
-            'http://localhost:3001',
-            'http://localhost:5173',
-            'http://localhost:5174',
-            'http://localhost:8080',
-            'http://localhost:8081',
-            'http://127.0.0.1:3000',
-            'http://127.0.0.1:5173',
-            'http://127.0.0.1:8080'
-        ];
-        
-        if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        if (origins.includes(origin)) {
             callback(null, true);
         } else {
-            console.warn(`⚠️  CORS: Origin ${origin} not in allowed list. Consider setting CORS_ORIGIN in .env`);
-            callback(null, true); // Still allow in development for flexibility
+            callback(new Error('Not allowed by CORS'));
         }
     };
+} else {
+    // If CORS_ORIGIN is not set, allow all origins (with warning in production)
+    if (process.env.NODE_ENV === 'production') {
+        console.warn('⚠️  CORS_ORIGIN not set in production. Allowing all origins. Consider setting CORS_ORIGIN in .env for security.');
+    }
+    corsOptions.origin = true; // Allow all origins
 }
 
 app.use(cors(corsOptions));
