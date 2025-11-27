@@ -1,0 +1,23 @@
+name: Deploy to cPanel via FTP
+
+on:
+  push:
+    branches:
+      - main  # Change 'main' to the branch you want to deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Deploy to cPanel via FTP
+        uses: SamKirkland/FTP-Deploy-Action@master
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}  # Store your FTP username as a GitHub secret
+          password: ${{ secrets.FTP_PASSWORD }} # Store your FTP password as a GitHub secret
+          local-dir: ./  # Path to the directory containing your code to be uploaded
+          exclude: ".git* .github*"  # You can specify files/directories to exclude
