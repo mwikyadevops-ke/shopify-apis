@@ -19,6 +19,7 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import quotationRoutes from './routes/quotationRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import alertRoutes from './routes/alertRoutes.js';
+import corsOptions from './config/corsOptions.js';
 
 // Load environment variables
 dotenv.config();
