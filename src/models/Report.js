@@ -53,7 +53,6 @@ const Report = {
                     s.product_id,
                     p.name as product_name,
                     p.sku,
-                    p.category,
                     s.quantity,
                     s.min_stock_level,
                     s.max_stock_level,

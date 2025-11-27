@@ -23,7 +23,6 @@ import corsOptions from './config/corsOptions.js';
 
 // Load environment variables
 dotenv.config();
-
 // Validate required environment variables
 try {
     validateEnv();
@@ -35,17 +34,6 @@ try {
 }
 
 const app = express();
-
-// Middleware
-// Configure Helmet to work with CORS
-// app.use(helmet({
-//     crossOriginResourcePolicy: { policy: "cross-origin" },
-//     crossOriginEmbedderPolicy: false
-// }));
-
-// CORS configuration - read origins only from .env
-
-
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
