@@ -13,7 +13,7 @@ import { actionLogger } from '../middleware/logger.js';
 const router = express.Router();
 
 // Protected routes
-router.post('/', verifyToken, requireRole('admin', 'manager'), validateStockTransfer.create, actionLogger('CREATE_STOCK_TRANSFER'), createTransfer);
+router.post('/', verifyToken, requireRole('admin'), validateStockTransfer.create, actionLogger('CREATE_STOCK_TRANSFER'), createTransfer);
 router.get('/', verifyToken, validatePagination, getTransfers);
 router.get('/:id', verifyToken, validateStockTransfer.id, getTransferById);
 router.put('/:id/complete', verifyToken, requireRole('admin', 'manager', 'staff'), validateStockTransfer.id, actionLogger('COMPLETE_STOCK_TRANSFER'), completeTransfer);

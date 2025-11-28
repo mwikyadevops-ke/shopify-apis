@@ -18,11 +18,11 @@ const router = express.Router();
 router.post('/login', validateUser.login, loginUser);
 router.post('/refresh-token', refreshToken);
 
-// Protected routes
-router.post('/', verifyToken, requireRole('admin', 'manager'), validateUser.create, actionLogger('CREATE_USER'), createUser);
-router.get('/', verifyToken, validatePagination, getUsers);
-router.get('/:id', verifyToken, validateUser.id, getUserById);
-router.put('/:id', verifyToken, requireRole('admin', 'manager'), validateUser.id, validateUser.update, actionLogger('UPDATE_USER'), updateUser);
+// Protected routes - Admin only
+router.post('/', verifyToken, requireRole('admin'), validateUser.create, actionLogger('CREATE_USER'), createUser);
+router.get('/', verifyToken, requireRole('admin'), validatePagination, getUsers);
+router.get('/:id', verifyToken, requireRole('admin'), validateUser.id, getUserById);
+router.put('/:id', verifyToken, requireRole('admin'), validateUser.id, validateUser.update, actionLogger('UPDATE_USER'), updateUser);
 router.delete('/:id', verifyToken, requireRole('admin'), validateUser.id, actionLogger('DELETE_USER'), deleteUser);
 
 export default router;
