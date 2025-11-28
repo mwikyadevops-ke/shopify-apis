@@ -426,6 +426,189 @@ const User = {
             console.error('Error deleting user:', error);
             throw error;
         }
+    },
+
+    // Change password (for authenticated users)
+    changePassword: async (userId, currentPassword, newPassword) => {
+        try {
+            // Get user with password
+            const [rows] = await db.query(
+                'SELECT id, password FROM users WHERE id = ? AND deleted_at IS NULL',
+                [userId]
+            );
+
+            if (rows.length === 0) {
+                return {
+                    success: false,
+                    message: 'User not found'
+                };
+            }
+
+            const user = rows[0];
+
+            // Verify current password
+            const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+
+            if (!isValidPassword) {
+                return {
+                    success: false,
+                    message: 'Current password is incorrect'
+                };
+            }
+
+            // Hash new password
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // Update password
+            await db.query(
+                'UPDATE users SET password = ? WHERE id = ?',
+                [hashedPassword, userId]
+            );
+
+            return {
+                success: true,
+                message: 'Password changed successfully'
+            };
+        } catch (error) {
+            console.error('Error changing password:', error);
+            throw error;
+        }
+    },
+
+    // Generate password reset token
+    generatePasswordResetToken: async (email) => {
+        try {
+            const userResult = await User.getByEmail(email);
+
+            if (!userResult.success) {
+                // Don't reveal if email exists or not for security
+                return {
+                    success: true,
+                    message: 'If the email exists, a password reset link has been sent'
+                };
+            }
+
+            const user = userResult.data;
+
+            // Check if user is active
+            if (user.status !== 'active') {
+                return {
+                    success: false,
+                    message: 'User account is not active'
+                };
+            }
+
+            // Generate reset token
+            const resetToken = jwt.sign(
+                { id: user.id, email: user.email, type: 'password_reset' },
+                process.env.JWT_SECRET || 'your-secret-key',
+                { expiresIn: '1h' }
+            );
+
+            // Set expiration (1 hour from now)
+            const resetExpires = new Date();
+            resetExpires.setHours(resetExpires.getHours() + 1);
+
+            // Save token to database
+            await db.query(
+                'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
+                [resetToken, resetExpires, user.id]
+            );
+
+            return {
+                success: true,
+                message: 'If the email exists, a password reset link has been sent',
+                data: {
+                    token: resetToken,
+                    email: user.email,
+                    expiresAt: resetExpires
+                }
+            };
+        } catch (error) {
+            console.error('Error generating password reset token:', error);
+            throw error;
+        }
+    },
+
+    // Reset password using token
+    resetPassword: async (token, newPassword) => {
+        try {
+            // Verify token
+            let decoded;
+            try {
+                decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+            } catch (error) {
+                if (error.name === 'TokenExpiredError') {
+                    return {
+                        success: false,
+                        message: 'Password reset token has expired'
+                    };
+                }
+                if (error.name === 'JsonWebTokenError') {
+                    return {
+                        success: false,
+                        message: 'Invalid password reset token'
+                    };
+                }
+                throw error;
+            }
+
+            // Check token type
+            if (decoded.type !== 'password_reset') {
+                return {
+                    success: false,
+                    message: 'Invalid token type'
+                };
+            }
+
+            // Get user and verify token matches
+            const [rows] = await db.query(
+                'SELECT id, password_reset_token, password_reset_expires FROM users WHERE id = ? AND deleted_at IS NULL',
+                [decoded.id]
+            );
+
+            if (rows.length === 0) {
+                return {
+                    success: false,
+                    message: 'User not found'
+                };
+            }
+
+            const user = rows[0];
+
+            // Verify token matches
+            if (user.password_reset_token !== token) {
+                return {
+                    success: false,
+                    message: 'Invalid password reset token'
+                };
+            }
+
+            // Check if token has expired
+            if (!user.password_reset_expires || new Date() > new Date(user.password_reset_expires)) {
+                return {
+                    success: false,
+                    message: 'Password reset token has expired'
+                };
+            }
+
+            // Hash new password
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // Update password and clear reset token
+            await db.query(
+                'UPDATE users SET password = ?, password_reset_token = NULL, password_reset_expires = NULL WHERE id = ?',
+                [hashedPassword, user.id]
+            );
+
+            return {
+                success: true,
+                message: 'Password reset successfully'
+            };
+        } catch (error) {
+            console.error('Error resetting password:', error);
+            throw error;
+        }
     }
 };
 

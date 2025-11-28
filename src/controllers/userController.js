@@ -155,3 +155,76 @@ export const deleteUser = asyncHandler(async (req, res) => {
     });
 });
 
+export const changePassword = asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPassword || !newPassword) {
+        throw new AppError('Current password and new password are required', 400);
+    }
+
+    if (newPassword.length < 6) {
+        throw new AppError('New password must be at least 6 characters long', 400);
+    }
+
+    const result = await User.changePassword(userId, currentPassword, newPassword);
+
+    if (!result.success) {
+        throw new AppError(result.message, 400);
+    }
+
+    res.status(200).json({
+        success: true,
+        message: result.message
+    });
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new AppError('Email is required', 400);
+    }
+
+    const result = await User.generatePasswordResetToken(email);
+
+    if (!result.success) {
+        throw new AppError(result.message, 400);
+    }
+
+    // Send password reset email if token was generated
+    if (result.data && result.data.token) {
+        const emailService = (await import('../config/email.js')).default;
+        await emailService.sendPasswordReset(result.data.email, result.data.token);
+    }
+
+    // Always return success message (don't reveal if email exists)
+    res.status(200).json({
+        success: true,
+        message: result.message
+    });
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+        throw new AppError('Token and new password are required', 400);
+    }
+
+    if (newPassword.length < 6) {
+        throw new AppError('New password must be at least 6 characters long', 400);
+    }
+
+    const result = await User.resetPassword(token, newPassword);
+
+    if (!result.success) {
+        throw new AppError(result.message, 400);
+    }
+
+    res.status(200).json({
+        success: true,
+        message: result.message
+    });
+});
+
